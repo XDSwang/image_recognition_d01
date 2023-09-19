@@ -56,7 +56,51 @@ def process_image01(image_path):
     cv2.drawContours(contour_image, contours, -1, (0, 255, 0), 2)
     return contour_image
 
-def process_image02(image_path):
+
+def process_image02(image_path, area_threshold_large=20, area_threshold_small=60):
+       
+    image = cv2.imread(image_path)   
+    # image = cv2.bitwise_not(image)
+    # 转换图像为灰度
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # 使用阈值进行分割
+    _, thresholded_image = cv2.threshold(gray_image, 128, 255, cv2.THRESH_BINARY)
+    # 执行膨胀操作
+    kernel = np.ones((3, 3), np.uint8)
+    thresholded_image = cv2.dilate(thresholded_image, kernel, iterations=5)
+    # 执行腐蚀操作
+    kernel = np.ones((3, 3), np.uint8)
+    eroded_image = cv2.erode(thresholded_image, kernel, iterations=3)
+    # 查找图像中的所有边框
+    contours, _ = cv2.findContours(thresholded_image, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+
+    # 可以对边框针对性删除增加处理。。。
+    filtered_contours = []
+
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > area_threshold_large :
+            filtered_contours.append(contour)
+    contours=filtered_contours
+    filtered_contours = []
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if  area < area_threshold_small:
+            filtered_contours.append(contour)
+
+    contours=filtered_contours        
+    # 绘制所有边框
+    contour_image = np.zeros_like(image)
+    # cv2.drawContours(contour_image, filtered_contours, -1, (0, 255, 0), 2)
+    cv2.drawContours(contour_image, contours, -1, (0, 255, 0), 2)
+    #执行腐蚀操作作
+    kernel = np.ones((3, 3), np.uint8)
+    contour_image = cv2.erode(contour_image, kernel, iterations=1)
+ 
+    return contour_image
+
+def process_image03(image_path):
     # 目前没有处理出来
     # 针对性处理当前功能都存在，可以参照修改处理差异的
     # 读取图像
@@ -78,12 +122,13 @@ def process_image02(image_path):
     # 绘制所有边框
     contour_image = np.zeros_like(image)
     cv2.drawContours(contour_image, contours, -1, (0, 255, 0), 2)
+       # # 执行膨胀操作
+    # kernel = np.ones((3, 3), np.uint8)
+    # contour_image = cv2.dilate(contour_image, kernel, iterations=2)
     #执行腐蚀操作作
-    kernel = np.ones((2, 2), np.uint8)
-    contour_image = cv2.erode(contour_image, kernel, iterations=3)
-    # 执行膨胀操作
-    kernel = np.ones((2, 2), np.uint8)
-    contour_image = cv2.dilate(contour_image, kernel, iterations=3)
+    kernel = np.ones((3, 3), np.uint8)
+    contour_image = cv2.erode(contour_image, kernel, iterations=1)
+ 
     return contour_image
 
 def opencv_match(img1, img2, threshold=0.3, threshold01=5):
@@ -160,10 +205,11 @@ def m01():
         print("No matches found.")
 def m02():
     src = os.path.split(os.path.realpath(__file__))[0]
-    a = "./data/mmexport1693120102165.jpg"
-    b = "./data/m01.jpg"
+    a = "/data/mmexport1693120102165.jpg"
+    b = "/data/m01.jpg"
+    # 这里使用了针对性处理  目前可以做到百分百匹配，做不到百分百全部找到
     img1=process_image02(src+a)
-    img2=process_image02(src+b)
+    img2=process_image03(src+b)
     # img1 = cv2.imread(src+a)
     # img2 = cv2.imread(src+b)
     cv2.imshow("Matching Result01", img1)
@@ -206,6 +252,6 @@ def m():
         print("No matches found.")
 
 if __name__ == "__main__":
-    # 尝试处理中
+    # 目前可以做到百分百匹配，做不到百分百全部找到。而且考虑每一个情况时间成本完全赶不上，放弃
     m02()
 
